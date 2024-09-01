@@ -1,4 +1,3 @@
-
 import os
 import cv2
 import numpy as np
@@ -13,7 +12,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Print TensorFlow version
+# Print TensorFlow and Keras versions
 st.write(f"TensorFlow version: {tf.__version__}")
 st.write(f"Keras version: {tf.__version__}")
 
@@ -25,7 +24,7 @@ if not os.path.exists(model_path):
 else:
     model = load_model(model_path)
 
-# Load Haar Cascade file
+# Load Haar Cascade file for face detection
 face_cascade_path = 'model/haarcascade_frontalface_default.xml'
 face_cascade = cv2.CascadeClassifier(face_cascade_path)
 
@@ -44,34 +43,53 @@ confidence_threshold = st.sidebar.slider('Confidence Threshold', 0.0, 1.0, 0.5, 
 st.sidebar.markdown("---")
 st.sidebar.write("Adjust the confidence threshold to filter predictions.")
 
-# Use Streamlit's camera input
-camera_input = st.camera_input("Take a picture")
+# Use Streamlit's camera input widget to capture a photo
+camera_input = st.camera_input("Take a picture", key="camera_input")
 
 if camera_input is not None:
-    # Convert the file to an OpenCV image
+    # Convert the captured image to an OpenCV format
     file_bytes = np.asarray(bytearray(camera_input.read()), dtype=np.uint8)
     frame = cv2.imdecode(file_bytes, 1)
 
-    # Convert frame to grayscale
+    # Convert frame to grayscale for face detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
+    # Debug: Output image dimensions
+    st.write(f"Image dimensions: {gray.shape}")
+
+    # Adjust parameters for face detection
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+
+    # Debug: Show number of faces detected
+    st.write(f"Number of faces detected: {len(faces)}")
+
+    if len(faces) == 0:
+        st.write("No faces detected. Please adjust the camera position or ensure proper lighting.")
+    
+    # Process each detected face
     for (x, y, w, h) in faces:
         roi_gray = gray[y:y + h, x:x + w]
         roi_gray = cv2.resize(roi_gray, (48, 48))
-        roi_gray = roi_gray.astype('float') / 255.0
+        roi_gray = roi_gray.astype('float32') / 255.0  # Use float32 for better precision
         roi_gray = np.expand_dims(roi_gray, axis=0)
         roi_gray = np.expand_dims(roi_gray, axis=-1)
 
         # Predict the emotion
         prediction = model.predict(roi_gray)
+
+        # Debug: Output prediction values
+        st.write(f"Prediction values: {prediction}")
+
         max_index = int(np.argmax(prediction))
         predicted_emotion = emotion_labels[max_index]
         confidence = prediction[0][max_index]
 
+        # Debug: Show predicted emotion and confidence
+        st.write(f"Predicted emotion: {predicted_emotion}, Confidence: {confidence:.2f}")
+
         if confidence >= confidence_threshold:
             # Draw bounding box
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
             # Draw emotion label with bold, bigger, and green text
             cv2.putText(
@@ -79,11 +97,13 @@ if camera_input is not None:
                 f"{predicted_emotion} ({confidence:.2f})", 
                 (x, y - 10), 
                 cv2.FONT_HERSHEY_SIMPLEX,  # Font type
-                1.5,  # Font size (bigger)
+                1.2,  # Font size (bigger)
                 (0, 255, 0),  # Color (green)
-                3,  # Thickness (bold)
+                2,  # Thickness (bold)
                 cv2.LINE_AA  # Line type for better anti-aliasing
             )
-    
+
+    # Display the frame with bounding boxes and labels
     st.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
-    st.info(f"Detected Faces: {len(faces)} | Confidence Threshold: {confidence_threshold}")
+else:
+    st.write("No image captured. Please use the camera to take a picture.")
