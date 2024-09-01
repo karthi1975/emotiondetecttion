@@ -17,9 +17,11 @@ st.write(f"Keras version: {tf.__version__}")
 
 # Load the pre-trained model from the 'model' directory
 model_path = 'model/FER_model.h5'
-if not st.file_uploader("Upload your model file", type=["h5"]):
-    st.error("Please upload the FER_model.h5 file.")
+if not os.path.exists(model_path):
+    st.error("Model file not found. Please ensure FER_model.h5 is in the 'model' directory.")
     st.stop()
+else:
+    model = load_model(model_path)
 
 # Load Haar Cascade file
 face_cascade_path = 'model/haarcascade_frontalface_default.xml'
