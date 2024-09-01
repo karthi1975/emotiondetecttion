@@ -1,10 +1,32 @@
+import os
 import cv2
-from keras.models import load_model
 import numpy as np
+import tensorflow as tf
 import streamlit as st
+from tensorflow.keras.models import load_model
 
-# Load the pre-trained model and Haar Cascade file from the 'model' directory
-model = load_model('model/FER_model.h5')
+# Set Streamlit page configuration as the first Streamlit command
+st.set_page_config(
+    page_title="Real-time Facial Emotion Recognition",
+    page_icon=":smiley:",
+    layout="wide",
+)
+
+# Print TensorFlow version
+st.write(f"TensorFlow version: {tf.__version__}")
+
+# Since Keras is part of TensorFlow in TF 2.x, use TensorFlow version
+st.write(f"Keras version: {tf.__version__}")
+
+# Check if the model file exists
+if not os.path.exists('model/FER_model.h5'):
+    st.error("Model file not found. Please check the file path.")
+    st.stop()
+else:
+    # Load the pre-trained model from the 'model' directory
+    model = load_model('model/FER_model.h5')
+
+# Load the Haar Cascade file
 face_cascade = cv2.CascadeClassifier('model/haarcascade_frontalface_default.xml')
 
 # Check if Haar Cascade is loaded correctly
@@ -14,13 +36,6 @@ if face_cascade.empty():
 
 # Define emotion labels
 emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-
-# Streamlit app configuration
-st.set_page_config(
-    page_title="Real-time Facial Emotion Recognition",
-    page_icon=":smiley:",
-    layout="wide",
-)
 
 st.title("🎭 Real-time Facial Emotion Recognition")
 st.sidebar.title("Settings")
