@@ -1,4 +1,3 @@
-import os
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -14,22 +13,18 @@ st.set_page_config(
 
 # Print TensorFlow version
 st.write(f"TensorFlow version: {tf.__version__}")
-
-# Since Keras is part of TensorFlow in TF 2.x, use TensorFlow version
 st.write(f"Keras version: {tf.__version__}")
 
-# Check if the model file exists
-if not os.path.exists('model/FER_model.h5'):
-    st.error("Model file not found. Please check the file path.")
+# Load the pre-trained model from the 'model' directory
+model_path = 'model/FER_model.h5'
+if not st.file_uploader("Upload your model file", type=["h5"]):
+    st.error("Please upload the FER_model.h5 file.")
     st.stop()
-else:
-    # Load the pre-trained model from the 'model' directory
-    model = load_model('model/FER_model.h5')
 
-# Load the Haar Cascade file
-face_cascade = cv2.CascadeClassifier('model/haarcascade_frontalface_default.xml')
+# Load Haar Cascade file
+face_cascade_path = 'model/haarcascade_frontalface_default.xml'
+face_cascade = cv2.CascadeClassifier(face_cascade_path)
 
-# Check if Haar Cascade is loaded correctly
 if face_cascade.empty():
     st.error("Failed to load Haar Cascade file. Please check the file path.")
     st.stop()
@@ -41,31 +36,17 @@ st.title("🎭 Real-time Facial Emotion Recognition")
 st.sidebar.title("Settings")
 
 # Sidebar controls
-run = st.sidebar.checkbox('Run')
 confidence_threshold = st.sidebar.slider('Confidence Threshold', 0.0, 1.0, 0.5, 0.01)
 st.sidebar.markdown("---")
 st.sidebar.write("Adjust the confidence threshold to filter predictions.")
 
-# Display area for live feed
-FRAME_WINDOW = st.image([])
-info_placeholder = st.empty()
+# Use Streamlit's camera input
+camera_input = st.camera_input("Take a picture")
 
-# Info panel
-st.sidebar.markdown("### How It Works:")
-st.sidebar.write("""
-This app uses a pre-trained neural network to recognize emotions from facial expressions in real-time. 
-You can start or stop the video feed using the checkbox above.
-""")
-
-# Capture video feed
-cap = cv2.VideoCapture(0)  # Change index if needed for your USB camera
-
-# Streamlit app main loop
-while run:
-    ret, frame = cap.read()
-    if not ret:
-        st.error("Unable to access camera. Make sure it is connected and accessible.")
-        break
+if camera_input is not None:
+    # Convert the file to an OpenCV image
+    file_bytes = np.asarray(bytearray(camera_input.read()), dtype=np.uint8)
+    frame = cv2.imdecode(file_bytes, 1)
 
     # Convert frame to grayscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -100,13 +81,5 @@ while run:
                 cv2.LINE_AA  # Line type for better anti-aliasing
             )
     
-    FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
-    info_placeholder.info(f"Detected Faces: {len(faces)} | Confidence Threshold: {confidence_threshold}")
-
-    # Exit condition to stop the video feed
-    if not run:
-        break
-
-# Release resources
-cap.release()
-cv2.destroyAllWindows()
+    st.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
+    st.info(f"Detected Faces: {len(faces)} | Confidence Threshold: {confidence_threshold}")
