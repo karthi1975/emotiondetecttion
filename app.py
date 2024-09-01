@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 
 # Load the pre-trained model and Haar Cascade file
-model = load_model('fer_model.h5')
+model = load_model('FER_model.h5')
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 # Define emotion labels
