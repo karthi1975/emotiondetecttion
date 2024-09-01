@@ -3,9 +3,14 @@ from keras.models import load_model
 import numpy as np
 import streamlit as st
 
-# Load the pre-trained model and Haar Cascade file
-model = load_model('FER_model.h5')
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+# Load the pre-trained model and Haar Cascade file from the 'model' directory
+model = load_model('model/FER_model.h5')
+face_cascade = cv2.CascadeClassifier('model/haarcascade_frontalface_default.xml')
+
+# Check if Haar Cascade is loaded correctly
+if face_cascade.empty():
+    st.error("Failed to load Haar Cascade file. Please check the file path.")
+    st.stop()
 
 # Define emotion labels
 emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
@@ -38,15 +43,16 @@ You can start or stop the video feed using the checkbox above.
 """)
 
 # Capture video feed
-cap = cv2.VideoCapture(0)  # 0 is the default camera
+cap = cv2.VideoCapture(0)  # Change index if needed for your USB camera
 
 # Streamlit app main loop
 while run:
     ret, frame = cap.read()
     if not ret:
-        st.write("Unable to access camera.")
+        st.error("Unable to access camera. Make sure it is connected and accessible.")
         break
 
+    # Convert frame to grayscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
@@ -64,20 +70,27 @@ while run:
         confidence = prediction[0][max_index]
 
         if confidence >= confidence_threshold:
-            # Draw bounding box and emotion label
+            # Draw bounding box
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+            # Draw emotion label with bold, bigger, and green text
             cv2.putText(
                 frame, 
                 f"{predicted_emotion} ({confidence:.2f})", 
                 (x, y - 10), 
-                cv2.FONT_HERSHEY_SIMPLEX, 
-                0.9, 
-                (255, 255, 255), 
-                2
+                cv2.FONT_HERSHEY_SIMPLEX,  # Font type
+                1.5,  # Font size (bigger)
+                (0, 255, 0),  # Color (green)
+                3,  # Thickness (bold)
+                cv2.LINE_AA  # Line type for better anti-aliasing
             )
     
-    FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
     info_placeholder.info(f"Detected Faces: {len(faces)} | Confidence Threshold: {confidence_threshold}")
+
+    # Exit condition to stop the video feed
+    if not run:
+        break
 
 # Release resources
 cap.release()
