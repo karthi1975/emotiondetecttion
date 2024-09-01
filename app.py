@@ -1,28 +1,17 @@
 import os
 import cv2
 import numpy as np
-import tensorflow as tf
 import streamlit as st
-from tensorflow.keras.models import load_model
 
 # Set Streamlit page configuration as the first Streamlit command
 st.set_page_config(
-    page_title="Real-time Facial Emotion Recognition",
+    page_title="Face Detection Test",
     page_icon=":smiley:",
     layout="wide",
 )
 
-# Print TensorFlow and Keras versions
-st.write(f"TensorFlow version: {tf.__version__}")
-st.write(f"Keras version: {tf.__version__}")
-
-# Load the pre-trained model from the 'model' directory
-model_path = 'model/FER_model.h5'
-if not os.path.exists(model_path):
-    st.error("Model file not found. Please ensure FER_model.h5 is in the 'model' directory.")
-    st.stop()
-else:
-    model = load_model(model_path)
+st.title("Face Detection Test")
+st.sidebar.title("Settings")
 
 # Load Haar Cascade file for face detection
 face_cascade_path = 'model/haarcascade_frontalface_default.xml'
@@ -32,16 +21,7 @@ if face_cascade.empty():
     st.error("Failed to load Haar Cascade file. Please check the file path.")
     st.stop()
 
-# Define emotion labels
-emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-
-st.title("🎭 Real-time Facial Emotion Recognition")
-st.sidebar.title("Settings")
-
-# Sidebar controls
-confidence_threshold = st.sidebar.slider('Confidence Threshold', 0.0, 1.0, 0.5, 0.01)
-st.sidebar.markdown("---")
-st.sidebar.write("Adjust the confidence threshold to filter predictions.")
+st.write("Haar Cascade loaded successfully.")
 
 # Use Streamlit's camera input widget to capture a photo
 camera_input = st.camera_input("Take a picture", key="camera_input")
@@ -57,7 +37,7 @@ if camera_input is not None:
     # Debug: Output image dimensions
     st.write(f"Image dimensions: {gray.shape}")
 
-    # Adjust parameters for face detection
+    # Detect faces in the image
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
 
     # Debug: Show number of faces detected
@@ -65,45 +45,12 @@ if camera_input is not None:
 
     if len(faces) == 0:
         st.write("No faces detected. Please adjust the camera position or ensure proper lighting.")
-    
-    # Process each detected face
-    for (x, y, w, h) in faces:
-        roi_gray = gray[y:y + h, x:x + w]
-        roi_gray = cv2.resize(roi_gray, (48, 48))
-        roi_gray = roi_gray.astype('float32') / 255.0  # Use float32 for better precision
-        roi_gray = np.expand_dims(roi_gray, axis=0)
-        roi_gray = np.expand_dims(roi_gray, axis=-1)
-
-        # Predict the emotion
-        prediction = model.predict(roi_gray)
-
-        # Debug: Output prediction values
-        st.write(f"Prediction values: {prediction}")
-
-        max_index = int(np.argmax(prediction))
-        predicted_emotion = emotion_labels[max_index]
-        confidence = prediction[0][max_index]
-
-        # Debug: Show predicted emotion and confidence
-        st.write(f"Predicted emotion: {predicted_emotion}, Confidence: {confidence:.2f}")
-
-        if confidence >= confidence_threshold:
-            # Draw bounding box
+    else:
+        # Draw bounding box around detected faces
+        for (x, y, w, h) in faces:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            # Draw emotion label with bold, bigger, and green text
-            cv2.putText(
-                frame, 
-                f"{predicted_emotion} ({confidence:.2f})", 
-                (x, y - 10), 
-                cv2.FONT_HERSHEY_SIMPLEX,  # Font type
-                1.2,  # Font size (bigger)
-                (0, 255, 0),  # Color (green)
-                2,  # Thickness (bold)
-                cv2.LINE_AA  # Line type for better anti-aliasing
-            )
-
-    # Display the frame with bounding boxes and labels
-    st.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
+        # Display the frame with bounding boxes
+        st.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
 else:
     st.write("No image captured. Please use the camera to take a picture.")
