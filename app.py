@@ -58,7 +58,7 @@ cap = None
 
 while st.session_state.run:
     if cap is None:
-        cap = cv2.VideoCapture(1)  # Use the default camera
+        cap = cv2.VideoCapture(0)  # Use the default camera
 
     ret, frame = cap.read()
     if not ret:
